@@ -20,11 +20,98 @@ const GrapesEditor = () => {
         plugins: [plugin1, plugin2],
         pluginsOpts: {
           [plugin1]: {},
+          [plugin2]: {
+            config: {
+              // Cấu hình cho Tailwind plugin
+              purgeCSS: false,
+            }
+          }
         },
         blockManager: {
-          appendTo: "",
+          appendTo: "#blocks",
         },
-        panels: {},
+        panels: {
+          defaults: [
+            {
+              id: 'layers',
+              el: '.panel__right',
+              resizable: {
+                maxDim: 350,
+                minDim: 200,
+                tc: 0,
+                cl: 1,
+                cr: 0,
+                bc: 0,
+                keyWidth: 'flex-basis',
+              },
+            },
+            {
+              id: 'panel-switcher',
+              el: '.panel__switcher',
+              buttons: [
+                {
+                  id: 'show-layers',
+                  active: true,
+                  label: 'Layers',
+                  command: 'show-layers',
+                  togglable: false,
+                },
+                {
+                  id: 'show-style',
+                  active: true,
+                  label: 'Styles',
+                  command: 'show-styles',
+                  togglable: false,
+                }
+              ],
+            }
+          ]
+        },
+        layerManager: {
+          appendTo: '.layers-container'
+        },
+        selectorManager: {
+          appendTo: '.styles-container'
+        },
+        styleManager: {
+          appendTo: '.styles-container',
+          sectors: [
+            {
+              name: 'Dimension',
+              open: false,
+              buildProps: ['width', 'min-height', 'padding'],
+              properties: [
+                {
+                  type: 'integer',
+                  name: 'The width',
+                  property: 'width',
+                  units: ['px', '%'],
+                  defaults: 'auto',
+                  min: 0,
+                }
+              ]
+            },
+            {
+              name: 'Extra',
+              open: false,
+              buildProps: ['background-color', 'box-shadow', 'custom-prop'],
+              properties: [
+                {
+                  id: 'custom-prop',
+                  name: 'Custom Label',
+                  property: 'font-size',
+                  type: 'select',
+                  defaults: '32px',
+                  options: [
+                    { value: '12px', name: 'Tiny' },
+                    { value: '18px', name: 'Medium' },
+                    { value: '32px', name: 'Big' },
+                  ],
+                }
+              ]
+            }
+          ]
+        }
       });
 
       editorInstanceRef.current = editor;
@@ -34,6 +121,35 @@ const GrapesEditor = () => {
         if (!editor.BlockManager.get(block.id)) {
           editor.BlockManager.add(block.id, block);
         }
+      });
+
+      // Thêm commands cho panels
+      editor.Commands.add('show-layers', {
+        getRowEl(editor) { return editor.getContainer().closest('.editor-row'); },
+        getLayersEl(row) { return row.querySelector('.layers-container') },
+
+        run(editor, sender) {
+          const lmEl = this.getLayersEl(this.getRowEl(editor));
+          lmEl.style.display = '';
+        },
+        stop(editor, sender) {
+          const lmEl = this.getLayersEl(this.getRowEl(editor));
+          lmEl.style.display = 'none';
+        },
+      });
+
+      editor.Commands.add('show-styles', {
+        getRowEl(editor) { return editor.getContainer().closest('.editor-row'); },
+        getStyleEl(row) { return row.querySelector('.styles-container') },
+
+        run(editor, sender) {
+          const smEl = this.getStyleEl(this.getRowEl(editor));
+          smEl.style.display = '';
+        },
+        stop(editor, sender) {
+          const smEl = this.getStyleEl(this.getRowEl(editor));
+          smEl.style.display = 'none';
+        },
       });
     }
   }, []);
@@ -118,30 +234,92 @@ export default ${componentName};
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div className="editor-row" style={{ display: "flex", flex: 1 }}>
         <div
           id="blocks"
           style={{
-            width: "0px",
-            height: "80vh",
+            width: "250px",
+            height: "100%",
             overflowY: "auto",
             borderRight: "1px solid #ddd",
-            padding: "0px",
+            padding: "10px",
+            backgroundColor: "#f8f9fa"
           }}
-        ></div>
+        >
+          <h3 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: "bold" }}>
+            Blocks
+          </h3>
+        </div>
         <div
           ref={editorRef}
           style={{
             flex: 1,
             border: "1px solid #ccc",
-            height: "80vh",
+            height: "100%",
             overflow: "auto",
           }}
-        ></div>
+        />
+        <div className="panel__right" style={{ width: "300px", display: "flex", flexDirection: "column" }}>
+          <div className="panel__switcher" style={{ 
+            display: "flex", 
+            borderBottom: "1px solid #ddd",
+            backgroundColor: "#f8f9fa"
+          }}>
+            <button 
+              style={{ 
+                flex: 1, 
+                padding: "10px", 
+                border: "none", 
+                backgroundColor: "transparent",
+                cursor: "pointer"
+              }}
+              onClick={() => {
+                const editor = editorInstanceRef.current;
+                if (editor) editor.runCommand('show-layers');
+              }}
+            >
+              Layers
+            </button>
+            <button 
+              style={{ 
+                flex: 1, 
+                padding: "10px", 
+                border: "none", 
+                backgroundColor: "transparent",
+                cursor: "pointer"
+              }}
+              onClick={() => {
+                const editor = editorInstanceRef.current;
+                if (editor) editor.runCommand('show-styles');
+              }}
+            >
+              Styles
+            </button>
+          </div>
+          <div className="layers-container" style={{ 
+            flex: 1, 
+            padding: "10px",
+            overflowY: "auto",
+            backgroundColor: "white"
+          }}></div>
+          <div className="styles-container" style={{ 
+            flex: 1, 
+            padding: "10px",
+            overflowY: "auto",
+            backgroundColor: "white",
+            display: "none"
+          }}></div>
+        </div>
       </div>
 
-      <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+      <div style={{ 
+        padding: "10px", 
+        borderTop: "1px solid #ddd",
+        backgroundColor: "#f8f9fa",
+        display: "flex",
+        justifyContent: "center"
+      }}>
         <button
           onClick={handleExport}
           style={{
@@ -155,7 +333,6 @@ export default ${componentName};
             cursor: "pointer",
             boxShadow: "0 4px 6px rgba(0,0,0,0.2)",
             transition: "all 0.3s ease",
-            marginLeft: "30px",
           }}
           onMouseOver={(e) => {
             e.target.style.background =
