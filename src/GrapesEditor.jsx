@@ -29,14 +29,7 @@ const GrapesEditor = () => {
 
       editorInstanceRef.current = editor;
 
-      // Thêm block button demo
-      // if (!editor.BlockManager.get("btn-block")) {
-      //   editor.BlockManager.add("btn-block", {
-      //     label: "Button",
-      //     content: `<button class="bg-blue-500 text-white px-4 py-2 rounded">Click me</button>`,
-      //   });
-      // }
-
+      // Thêm các block từ file Blocks
       Blocks.forEach((block) => {
         if (!editor.BlockManager.get(block.id)) {
           editor.BlockManager.add(block.id, block);
@@ -45,19 +38,48 @@ const GrapesEditor = () => {
     }
   }, []);
 
+  // Hàm lọc CSS chỉ lấy class đang dùng trong HTML
+  const filterCSS = (fullCSS, classList) => {
+    const blocks = fullCSS.split("}");
+    const filtered = blocks
+      .map((b) => b.trim())
+      .filter((b) =>
+        classList.some((cls) => {
+          const escaped = cls.replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+          return b.includes(`.${escaped}`);
+        })
+      )
+      .map((b) => b + "}");
+    return filtered.join("\n");
+  };
+
   const handleExport = () => {
     const editor = editorInstanceRef.current;
     if (editor) {
       let html = editor.getHtml();
 
-      // 🚀 Chuyển HTML → JSX cơ bản
-      html = html.replace(/class=/g, "className=");
-      html = html.replace(/for=/g, "htmlFor=");
+      // Chuyển HTML → JSX cơ bản
+      html = html.replace(/class=/g, "className=").replace(/for=/g, "htmlFor=");
 
-      // 🔹 Hỏi tên component & file
+      // Lấy danh sách class duy nhất trong HTML
+      const classList = Array.from(
+        new Set(
+          html.match(/className="([^"]+)"/g)?.flatMap((m) =>
+            m
+              .replace(/className="/, "")
+              .replace(/"/, "")
+              .split(/\s+/)
+          ) || []
+        )
+      );
+
+      // Lấy CSS đầy đủ từ GrapesJS
+      const fullCSS = editor.getCss();
+      const filteredCSS = filterCSS(fullCSS, classList);
+
+      // Nhập tên component
       let componentName = prompt("Nhập tên component:", "ExportedComponent");
       if (!componentName) return;
-      // Viết hoa chữ cái đầu nếu chưa có
       componentName =
         componentName.charAt(0).toUpperCase() + componentName.slice(1);
 
@@ -66,16 +88,17 @@ const GrapesEditor = () => {
 
         const ${componentName} = () => (
           <>
+            <style>{\`${filteredCSS}\`}</style>
             ${html}
           </>
         );
 
         export default ${componentName};
-      `;
+              `;
 
       console.log("JSX Export:\n", jsxCode);
 
-      // 🚀 Tải file về máy
+      // Tải file JSX về máy
       const blob = new Blob([jsxCode], { type: "text/plain;charset=utf-8" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -92,7 +115,7 @@ const GrapesEditor = () => {
           style={{
             width: "0px",
             height: "80vh",
-            overflowY: "auto", // thêm scroll dọc
+            overflowY: "auto",
             borderRight: "1px solid #ddd",
             padding: "0px",
           }}
@@ -103,7 +126,7 @@ const GrapesEditor = () => {
             flex: 1,
             border: "1px solid #ccc",
             height: "80vh",
-            overflow: "auto", // scroll cho canvas nếu cần
+            overflow: "auto",
           }}
         ></div>
       </div>
