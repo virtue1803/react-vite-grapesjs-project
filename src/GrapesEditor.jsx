@@ -38,16 +38,17 @@ const GrapesEditor = () => {
     }
   }, []);
 
-  // Hàm lọc CSS chỉ lấy class đang dùng trong HTML
-  const filterCSS = (fullCSS, classList) => {
+  // Hàm lọc CSS chỉ lấy class và id đang dùng trong HTML
+  const filterCSS = (fullCSS, classList, idList) => {
     const blocks = fullCSS.split("}");
     const filtered = blocks
       .map((b) => b.trim())
-      .filter((b) =>
-        classList.some((cls) => {
-          const escaped = cls.replace(/\[/g, "\\[").replace(/\]/g, "\\]");
-          return b.includes(`.${escaped}`);
-        })
+      .filter(
+        (b) =>
+          classList.some((cls) => {
+            const escapedCls = cls.replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+            return b.includes(`.${escapedCls}`);
+          }) || idList.some((id) => b.includes(`#${id}`))
       )
       .map((b) => b + "}");
     return filtered.join("\n");
@@ -73,9 +74,18 @@ const GrapesEditor = () => {
         )
       );
 
+      // Lấy danh sách id duy nhất trong HTML
+      const idList = Array.from(
+        new Set(
+          html
+            .match(/id="([^"]+)"/g)
+            ?.map((m) => m.replace(/id="/, "").replace(/"/, "")) || []
+        )
+      );
+
       // Lấy CSS đầy đủ từ GrapesJS
       const fullCSS = editor.getCss();
-      const filteredCSS = filterCSS(fullCSS, classList);
+      const filteredCSS = filterCSS(fullCSS, classList, idList);
 
       // Nhập tên component
       let componentName = prompt("Nhập tên component:", "ExportedComponent");
@@ -84,17 +94,17 @@ const GrapesEditor = () => {
         componentName.charAt(0).toUpperCase() + componentName.slice(1);
 
       const jsxCode = `
-        import React from "react";
+import React from "react";
 
-        const ${componentName} = () => (
-          <>
-            <style>{\`${filteredCSS}\`}</style>
-            ${html}
-          </>
-        );
+const ${componentName} = () => (
+  <>
+    <style>{\`${filteredCSS}\`}</style>
+    ${html}
+  </>
+);
 
-        export default ${componentName};
-              `;
+export default ${componentName};
+      `;
 
       console.log("JSX Export:\n", jsxCode);
 
